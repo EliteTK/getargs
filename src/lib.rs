@@ -28,12 +28,12 @@
 //!
 //! * Zero cost
 //! * Zero copy
-//! * Zero unsafe code
+//! * Zero unsafe code except for `&OsStr`
 //! * Zero dependencies
 //! * Zero allocation
 //! * Simple to use yet versatile
 //! * `#![no_std]`-compatible
-//! * Compatible with `&str` and `&[u8]`
+//! * Compatible with `&str`, `&[u8]` and `&OsStr`
 //!
 //! ## Performance
 //!

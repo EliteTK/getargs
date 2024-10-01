@@ -1,4 +1,6 @@
 use core::fmt::{Debug, Display, Formatter, Write};
+#[cfg(feature = "std")]
+use std::ffi::OsStr;
 
 /// The argument trait for types that can be parsed by
 /// [`Options`][crate::Options].
@@ -314,6 +316,67 @@ impl Argument for &[u8] {
     #[inline]
     fn display(self) -> impl Display {
         DisplaySliceU8 { slice: self }
+    }
+}
+
+#[cfg(feature = "std")]
+impl Argument for &OsStr {
+    #[inline]
+    fn ends_opts(self) -> bool {
+        self.as_encoded_bytes().ends_opts()
+    }
+
+    #[inline]
+    fn parse_long_opt<'opt>(self) -> Result<Self, Option<(&'opt str, Option<Self>)>>
+    where
+        Self: 'opt,
+    {
+        self.as_encoded_bytes()
+            .parse_long_opt()
+            .map(|o| {
+                o.map(|t| {
+                    (
+                        t.0,
+                        t.1.map(|s| unsafe { OsStr::from_encoded_bytes_unchecked(s) }),
+                    )
+                })
+            })
+            .map_err(|e| {
+                ConversionError::new(unsafe { OsStr::from_encoded_bytes_unchecked(e.option) })
+            })
+    }
+
+    #[inline]
+    fn parse_short_cluster(self, allow_number: bool) -> Option<Self> {
+        self.as_encoded_bytes()
+            .parse_short_cluster(allow_number)
+            .map(|s| unsafe { OsStr::from_encoded_bytes_unchecked(s) })
+    }
+
+    #[inline]
+    fn consume_short_opt(self) -> Result<Self, (char, Option<Self>)> {
+        self.as_encoded_bytes()
+            .consume_short_opt()
+            .map(|t| {
+                (
+                    t.0,
+                    t.1.map(|s| unsafe { OsStr::from_encoded_bytes_unchecked(s) }),
+                )
+            })
+            .map_err(|e| {
+                ConversionError::new(unsafe { OsStr::from_encoded_bytes_unchecked(e.option) })
+            })
+    }
+
+    #[inline]
+    fn consume_short_val(self) -> Self {
+        self
+    }
+
+    fn display(self) -> impl Display {
+        DisplaySliceU8 {
+            slice: self.as_encoded_bytes(),
+        }
     }
 }
 
