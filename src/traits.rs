@@ -1,4 +1,4 @@
-use core::fmt::Debug;
+use core::fmt::{Debug, Display, Formatter, Write};
 
 /// The argument trait for types that can be parsed by
 /// [`Options`][crate::Options].
@@ -116,6 +116,16 @@ pub trait Argument: Copy + Eq + Debug {
     /// [`parse_short_cluster`][Self::parse_short_cluster]. Returns the
     /// value that was consumed.
     fn consume_short_val(self) -> Self;
+
+    /// Returns an object implementing Display which can be used to format the
+    /// Argument.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use getargs::Argument;
+    /// assert_eq!(b"abc".display().to_string(), "abc");
+    fn display(self) -> impl Display;
 }
 
 #[inline]
@@ -190,6 +200,29 @@ impl Argument for &str {
     fn consume_short_val(self) -> Self {
         self
     }
+
+    #[inline]
+    fn display(self) -> impl Display {
+        self
+    }
+}
+
+struct DisplaySliceU8<'a> {
+    slice: &'a [u8],
+}
+
+impl Display for DisplaySliceU8<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        f.write_str("")?;
+        for chunk in self.slice.utf8_chunks() {
+            f.write_str(chunk.valid())?;
+            let invalid = chunk.invalid();
+            if !invalid.is_empty() {
+                f.write_char(char::REPLACEMENT_CHARACTER)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Argument for &[u8] {
@@ -233,6 +266,11 @@ impl Argument for &[u8] {
     #[inline]
     fn consume_short_val(self) -> Self {
         self
+    }
+
+    #[inline]
+    fn display(self) -> impl Display {
+        DisplaySliceU8 { slice: self }
     }
 }
 
