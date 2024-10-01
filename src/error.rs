@@ -42,9 +42,9 @@ pub enum Error<A: Argument> {
 impl<'arg, S: Display, A: Argument<ShortOpt = S> + Display + 'arg> Display for Error<A> {
     fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
         match self {
-            Error::RequiresValue(opt) => write!(f, "option requires a value: {}", opt),
+            Error::RequiresValue(opt) => write!(f, "option '{}' requires a value", opt),
             Error::DoesNotRequireValue(opt) => {
-                write!(f, "option does not require a value: {}", opt)
+                write!(f, "option '{}' does not expect a value", opt)
             }
         }
     }
