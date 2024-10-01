@@ -85,18 +85,18 @@ fn getargs5b<'arg, I: Iterator<Item = &'arg [u8]>>(iter: I) -> Settings<&'arg [u
 
     while let Some(opt) = opts.next_opt().unwrap() {
         match opt {
-            Opt::Short(b'1') => settings.short_present1 = true,
-            Opt::Short(b'2') => settings.short_present2 = true,
-            Opt::Short(b'3') => settings.short_present3 = true,
-            Opt::Long(b"present1") => settings.long_present1 = true,
-            Opt::Long(b"present2") => settings.long_present2 = true,
-            Opt::Long(b"present3") => settings.long_present3 = true,
-            Opt::Short(b'4') => settings.short_value1 = Some(opts.value().unwrap()),
-            Opt::Short(b'5') => settings.short_value2 = Some(opts.value().unwrap()),
-            Opt::Short(b'6') => settings.short_value3 = Some(opts.value().unwrap()),
-            Opt::Long(b"val1") => settings.long_value1 = Some(opts.value().unwrap()),
-            Opt::Long(b"val2") => settings.long_value2 = Some(opts.value().unwrap()),
-            Opt::Long(b"val3") => settings.long_value3 = Some(opts.value().unwrap()),
+            Opt::Short('1') => settings.short_present1 = true,
+            Opt::Short('2') => settings.short_present2 = true,
+            Opt::Short('3') => settings.short_present3 = true,
+            Opt::Long("present1") => settings.long_present1 = true,
+            Opt::Long("present2") => settings.long_present2 = true,
+            Opt::Long("present3") => settings.long_present3 = true,
+            Opt::Short('4') => settings.short_value1 = Some(opts.value().unwrap()),
+            Opt::Short('5') => settings.short_value2 = Some(opts.value().unwrap()),
+            Opt::Short('6') => settings.short_value3 = Some(opts.value().unwrap()),
+            Opt::Long("val1") => settings.long_value1 = Some(opts.value().unwrap()),
+            Opt::Long("val2") => settings.long_value2 = Some(opts.value().unwrap()),
+            Opt::Long("val3") => settings.long_value3 = Some(opts.value().unwrap()),
             _ => {}
         }
     }

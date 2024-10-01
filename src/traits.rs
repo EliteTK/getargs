@@ -23,10 +23,6 @@ use core::fmt::{Debug, Display, Formatter, Write};
 /// the inexpensive, zero-copy expectations of argument types. This
 /// should be a borrow like `&str`, not an owned struct like `String`.
 pub trait Argument: Copy + Eq + Debug {
-    /// The short-flag type. For [`&str`], this is [`char`]. For
-    /// [`&[u8]`][slice], this is `u8`.
-    type ShortOpt: Copy + Eq + Debug;
-
     /// Returns `true` if this argument signals that no additional
     /// options should be parsed. If this method returns `true`, then
     /// [`Options::next_opt`][crate::Options::next_opt] will not attempt
@@ -50,12 +46,15 @@ pub trait Argument: Copy + Eq + Debug {
     ///
     /// ```
     /// # use getargs::Argument;
-    /// assert_eq!("--flag".parse_long_opt(), Some(("flag", None)));
-    /// assert_eq!("--flag=value".parse_long_opt(), Some(("flag", Some("value"))));
-    /// assert_eq!("--flag=".parse_long_opt(), Some(("flag", Some(""))));
-    /// assert_eq!("-a".parse_long_opt(), None);
+    /// assert_eq!("--flag".parse_long_opt(), Ok(Some(("flag", None))));
+    /// assert_eq!("--flag=value".parse_long_opt(), Ok(Some(("flag", Some("value")))));
+    /// assert_eq!("--flag=".parse_long_opt(), Ok(Some(("flag", Some("")))));
+    /// assert_eq!("-a".parse_long_opt(), Ok(None));
+    ///// assert_eq!(b"--\xFF".parse_long_opt(), Err(ConversionError));
     /// ```
-    fn parse_long_opt(self) -> Option<(Self, Option<Self>)>;
+    fn parse_long_opt<'opt>(self) -> Result<Self, Option<(&'opt str, Option<Self>)>>
+    where
+        Self: 'opt;
 
     /// Attempts to parse this argument as a "short option cluster".
     /// Returns the short option cluster if present.
@@ -106,10 +105,10 @@ pub trait Argument: Copy + Eq + Debug {
     ///
     /// ```
     /// # use getargs::Argument;
-    /// assert_eq!("abc".consume_short_opt(), ('a', Some("bc")));
-    /// assert_eq!("a".consume_short_opt(), ('a', None));
+    /// assert_eq!("abc".consume_short_opt(), Ok(('a', Some("bc"))));
+    /// assert_eq!("a".consume_short_opt(), Ok(('a', None)));
     /// ```
-    fn consume_short_opt(self) -> (Self::ShortOpt, Option<Self>);
+    fn consume_short_opt(self) -> Result<Self, (char, Option<Self>)>;
 
     /// Consumes the value of a short option from a "short
     /// option cluster", as defined by
@@ -156,25 +155,50 @@ fn is_number(bytes: &[u8]) -> bool {
     state != State::Separator
 }
 
-impl Argument for &str {
-    type ShortOpt = char;
+#[derive(Debug, PartialEq, Clone, Eq, Copy)]
+pub struct ConversionError<A: Argument> {
+    option: A,
+}
 
+impl<A: Argument> ConversionError<A> {
+    fn new(option: A) -> Self {
+        Self { option }
+    }
+}
+
+impl<A: Argument> Display for ConversionError<A> {
+    fn fmt(&self, f: &mut Formatter) -> core::fmt::Result {
+        write!(f, "invalid UTF-8 within option: {}", self.option.display())
+    }
+}
+
+#[cfg(feature = "std")]
+impl<A: Argument> std::error::Error for ConversionError<A> {}
+
+pub type Result<A, T> = core::result::Result<T, ConversionError<A>>;
+
+impl Argument for &str {
     #[inline]
     fn ends_opts(self) -> bool {
         self == "--"
     }
 
     #[inline]
-    fn parse_long_opt(self) -> Option<(Self, Option<Self>)> {
+    fn parse_long_opt<'opt>(self) -> Result<Self, Option<(&'opt str, Option<Self>)>>
+    where
+        Self: 'opt,
+    {
         // Using iterators is slightly faster in release, but many times
         // (>400%) as slow in dev
 
-        let option = self.strip_prefix("--").filter(|s| !s.is_empty())?;
+        let Some(option) = self.strip_prefix("--").filter(|s| !s.is_empty()) else {
+            return Ok(None);
+        };
 
         if let Some((option, value)) = option.split_once('=') {
-            Some((option, Some(value)))
+            Ok(Some((option, Some(value))))
         } else {
-            Some((option, None))
+            Ok(Some((option, None)))
         }
     }
 
@@ -185,7 +209,7 @@ impl Argument for &str {
     }
 
     #[inline]
-    fn consume_short_opt(self) -> (Self::ShortOpt, Option<Self>) {
+    fn consume_short_opt(self) -> Result<Self, (char, Option<Self>)> {
         let ch = self
             .chars()
             .next()
@@ -193,7 +217,7 @@ impl Argument for &str {
 
         // using `unsafe` here only improves performance by ~10% and is
         // not worth it for losing the "we don't use `unsafe`" guarantee
-        (ch, Some(&self[ch.len_utf8()..]).filter(|s| !s.is_empty()))
+        Ok((ch, Some(&self[ch.len_utf8()..]).filter(|s| !s.is_empty())))
     }
 
     #[inline]
@@ -226,16 +250,19 @@ impl Display for DisplaySliceU8<'_> {
 }
 
 impl Argument for &[u8] {
-    type ShortOpt = u8;
-
     #[inline]
     fn ends_opts(self) -> bool {
         self == b"--"
     }
 
     #[inline]
-    fn parse_long_opt(self) -> Option<(Self, Option<Self>)> {
-        let option = self.strip_prefix(b"--").filter(|a| !a.is_empty())?;
+    fn parse_long_opt<'opt>(self) -> Result<Self, Option<(&'opt str, Option<Self>)>>
+    where
+        Self: 'opt,
+    {
+        let Some(option) = self.strip_prefix(b"--").filter(|a| !a.is_empty()) else {
+            return Ok(None);
+        };
 
         // This is faster than iterators in dev
         let name = option.split(|b| *b == b'=').next().unwrap();
@@ -245,7 +272,11 @@ impl Argument for &[u8] {
             None
         };
 
-        Some((name, value))
+        let Ok(name) = core::str::from_utf8(name) else {
+            return Err(ConversionError::new(self));
+        };
+
+        Ok(Some((name, value)))
     }
 
     #[inline]
@@ -255,12 +286,24 @@ impl Argument for &[u8] {
     }
 
     #[inline]
-    fn consume_short_opt(self) -> (Self::ShortOpt, Option<Self>) {
-        let (byte, rest) = self
-            .split_first()
-            .expect("<&[u8] as getargs::Argument>::consume_short_opt called on an empty slice");
+    fn consume_short_opt(self) -> Result<Self, (char, Option<Self>)> {
+        if self[0].is_ascii() {
+            Ok((self[0] as char, Some(&self[1..]).filter(|s| !s.is_empty())))
+        } else {
+            let Some(ch) = self
+                .utf8_chunks()
+                .next()
+                .expect("<&[u8] as getargs::Argument>::consume_short_opt called on an empty string")
+                .valid()
+                .chars()
+                .next()
+            else {
+                return Err(ConversionError::new(self));
+            };
 
-        (*byte, Some(rest).filter(|s| !s.is_empty()))
+            let rest = &self[ch.len_utf8()..];
+            Ok((ch, Some(rest).filter(|s| !s.is_empty())))
+        }
     }
 
     #[inline]

@@ -11,7 +11,7 @@ fn main() {
 
     while let Some(arg) = opts.next_arg().expect("usage error") {
         match arg {
-            Arg::Short(b'f') | Arg::Long(b"file") => {
+            Arg::Short('f') | Arg::Long("file") => {
                 let f = OsStr::from_bytes(opts.value().expect("usage error"));
                 println!("file option: {f:?}");
             }

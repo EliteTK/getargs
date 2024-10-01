@@ -412,21 +412,21 @@ fn bytes() {
 
     let mut opts = Options::new(args.into_iter());
 
-    assert_eq!(opts.next_opt(), Ok(Some(Opt::Short(b'o'))));
+    assert_eq!(opts.next_opt(), Ok(Some(Opt::Short('o'))));
     assert_eq!(opts.value(), Ok(b"hi".as_slice()));
-    assert_eq!(opts.next_opt(), Ok(Some(Opt::Long(b"opt".as_slice()))));
+    assert_eq!(opts.next_opt(), Ok(Some(Opt::Long("opt"))));
     assert_eq!(opts.value(), Ok(b"HI".as_slice()));
-    assert_eq!(opts.next_opt(), Ok(Some(Opt::Short(b'o'))));
+    assert_eq!(opts.next_opt(), Ok(Some(Opt::Short('o'))));
     assert_eq!(opts.value(), Ok(b"hi".as_slice()));
-    assert_eq!(opts.next_opt(), Ok(Some(Opt::Long(b"opt".as_slice()))));
+    assert_eq!(opts.next_opt(), Ok(Some(Opt::Long("opt"))));
     assert_eq!(opts.value(), Ok(b"hi".as_slice()));
-    assert_eq!(opts.next_opt(), Ok(Some(Opt::Long(b"optional".as_slice()))));
+    assert_eq!(opts.next_opt(), Ok(Some(Opt::Long("optional"))));
     assert_eq!(opts.value_opt(), None);
-    assert_eq!(opts.next_opt(), Ok(Some(Opt::Long(b"optional".as_slice()))));
+    assert_eq!(opts.next_opt(), Ok(Some(Opt::Long("optional"))));
     assert_eq!(opts.value_opt(), Some(b"value".as_slice()));
-    assert_eq!(opts.next_opt(), Ok(Some(Opt::Short(b'O'))));
+    assert_eq!(opts.next_opt(), Ok(Some(Opt::Short('O'))));
     assert_eq!(opts.value_opt(), None);
-    assert_eq!(opts.next_opt(), Ok(Some(Opt::Short(b'O'))));
+    assert_eq!(opts.next_opt(), Ok(Some(Opt::Short('O'))));
     assert_eq!(opts.value_opt(), Some(b"value".as_slice()));
     assert_eq!(opts.next_opt(), Ok(None));
     assert!(opts.opts_ended());
