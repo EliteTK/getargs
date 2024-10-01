@@ -22,6 +22,7 @@
 //!   `--explicit=VALUE`
 //! * Positional arguments and `--`
 //! * Parse options at the beginning of the argument list, or anywhere
+//! * Optionally parse negative numbers as positional arguments
 //!
 //! ## Benefits
 //!
@@ -398,6 +399,8 @@ pub struct Options<A: Argument, I: Iterator<Item = A>> {
     iter: I,
     /// State information.
     state: State<A>,
+    /// Parse short option clusters which look like negative numbers as options
+    allow_number_sopts: bool,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -438,7 +441,12 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
         Options {
             iter,
             state: State::Start { ended_opts: false },
+            allow_number_sopts: true,
         }
+    }
+
+    pub fn allow_number_short_options(&mut self, value: bool) {
+        self.allow_number_sopts = value
     }
 
     /// Retrieves the next option.
@@ -484,7 +492,7 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
                     }
 
                     Ok(Some(opt))
-                } else if let Some(cluster) = arg.parse_short_cluster() {
+                } else if let Some(cluster) = arg.parse_short_cluster(self.allow_number_sopts) {
                     let (opt, rest) = cluster.consume_short_opt();
                     let opt = Opt::Short(opt);
 

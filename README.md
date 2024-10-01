@@ -22,6 +22,7 @@ you do with it.
 * Required or optional explicit values `-eVALUE` and `--explicit=VALUE`
 * Positional arguments and `--`
 * Parse options at the beginning of the argument list, or anywhere
+* Optionally parse negative numbers as positional arguments
 
 ## Benefits
 

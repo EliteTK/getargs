@@ -81,11 +81,14 @@ pub trait Argument: Copy + Eq + Debug {
     ///
     /// ```
     /// # use getargs::Argument;
-    /// assert_eq!("-abc".parse_short_cluster(), Some("abc"));
-    /// assert_eq!("-a".parse_short_cluster(), Some("a"));
-    /// assert_eq!("-".parse_short_cluster(), None);
+    /// assert_eq!("-abc".parse_short_cluster(true), Some("abc"));
+    /// assert_eq!("-a".parse_short_cluster(true), Some("a"));
+    /// assert_eq!("-".parse_short_cluster(true), None);
+    /// assert_eq!("-1".parse_short_cluster(true), Some("1"));
+    /// assert_eq!("-1".parse_short_cluster(false), None);
+    /// assert_eq!("-a".parse_short_cluster(false), Some("a"));
     /// ```
-    fn parse_short_cluster(self) -> Option<Self>;
+    fn parse_short_cluster(self, allow_number: bool) -> Option<Self>;
 
     /// Attempts to consume one short option from a "short option
     /// cluster", as defined by
@@ -115,6 +118,34 @@ pub trait Argument: Copy + Eq + Debug {
     fn consume_short_val(self) -> Self;
 }
 
+#[inline]
+fn is_number(bytes: &[u8]) -> bool {
+    if bytes.is_empty() {
+        return false;
+    }
+    #[derive(PartialEq)]
+    enum State {
+        Integer,
+        Separator,
+        Fractional,
+    }
+    let mut state = State::Integer;
+    for b in bytes {
+        state = match state {
+            State::Integer => match b {
+                b'.' => State::Separator,
+                b'0'..=b'9' => State::Integer,
+                _ => return false,
+            },
+            State::Separator | State::Fractional => match b {
+                b'0'..=b'9' => State::Fractional,
+                _ => return false,
+            },
+        }
+    }
+    state != State::Separator
+}
+
 impl Argument for &str {
     type ShortOpt = char;
 
@@ -138,8 +169,9 @@ impl Argument for &str {
     }
 
     #[inline]
-    fn parse_short_cluster(self) -> Option<Self> {
-        self.strip_prefix('-').filter(|s| !s.is_empty())
+    fn parse_short_cluster(self, allow_number: bool) -> Option<Self> {
+        self.strip_prefix('-')
+            .filter(|s| !s.is_empty() && (allow_number || !is_number(s.as_ref())))
     }
 
     #[inline]
@@ -184,8 +216,9 @@ impl Argument for &[u8] {
     }
 
     #[inline]
-    fn parse_short_cluster(self) -> Option<Self> {
-        self.strip_prefix(b"-").filter(|a| !a.is_empty())
+    fn parse_short_cluster(self, allow_number: bool) -> Option<Self> {
+        self.strip_prefix(b"-")
+            .filter(|a| !a.is_empty() && (allow_number || !is_number(a)))
     }
 
     #[inline]
@@ -200,5 +233,43 @@ impl Argument for &[u8] {
     #[inline]
     fn consume_short_val(self) -> Self {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_number;
+    #[test]
+    fn test_is_number() {
+        assert!(is_number(b"123"));
+        assert!(is_number(b"123.456"));
+        assert!(is_number(b".123"));
+        assert!(is_number(b"1"));
+        assert!(is_number(b".1"));
+        assert!(is_number(b"0"));
+        assert!(is_number(b"1"));
+        assert!(is_number(b"2"));
+        assert!(is_number(b"3"));
+        assert!(is_number(b"4"));
+        assert!(is_number(b"5"));
+        assert!(is_number(b"6"));
+        assert!(is_number(b"7"));
+        assert!(is_number(b"8"));
+        assert!(is_number(b"9"));
+        assert!(is_number(b"0123456789"));
+    }
+
+    #[test]
+    fn test_not_is_number() {
+        assert!(!is_number(b""));
+        assert!(!is_number(b"a"));
+        assert!(!is_number(b"0a"));
+        assert!(!is_number(b"a0"));
+        assert!(!is_number(b"1..2"));
+        assert!(!is_number(b"1."));
+        assert!(!is_number(b"123."));
+        assert!(!is_number(b"123..456"));
+        assert!(!is_number(b"1234b"));
+        assert!(!is_number(b"asdf1234foo"));
     }
 }

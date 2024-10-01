@@ -33,7 +33,7 @@ fn long_flag_value() -> Option<(&'static str, Option<&'static str>)> {
 
 #[inline(never)]
 fn short_flag_cluster() -> Option<&'static str> {
-    black_box("-verylongshortflagcluster").parse_short_cluster()
+    black_box("-verylongshortflagcluster").parse_short_cluster(true)
 }
 
 #[inline(never)]
@@ -78,7 +78,7 @@ fn bytes_long_flag_value() -> Option<(&'static [u8], Option<&'static [u8]>)> {
 
 #[inline(never)]
 fn bytes_short_flag_cluster() -> Option<&'static [u8]> {
-    black_box(b"-verylongshortflagcluster").parse_short_cluster()
+    black_box(b"-verylongshortflagcluster").parse_short_cluster(true)
 }
 
 #[inline(never)]
