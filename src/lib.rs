@@ -562,7 +562,7 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
     /// #
     /// # assert_eq!(opts.is_empty(), true);
     /// ```
-    pub fn next_arg(&'_ mut self) -> Result<A, Option<Arg<A>>> {
+    pub fn next_arg(&mut self) -> Result<A, Option<Arg<A>>> {
         if !self.opts_ended() {
             if let Some(opt) = self.next_opt()? {
                 return Ok(Some(opt.into()));
@@ -600,7 +600,7 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
     /// assert_eq!(opts.next_opt(), Ok(Some(Opt::Short('c'))));
     /// assert_eq!(opts.value(), Ok("see"));
     /// ```
-    pub fn value(&'_ mut self) -> Result<A, A> {
+    pub fn value(&mut self) -> Result<A, A> {
         match self.state {
             State::Start { .. } | State::Positional(_) | State::End { .. } => {
                 panic!("called Options::value() with no previous option")
@@ -670,7 +670,7 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
     /// assert_eq!(opts.value_opt(), Some("value"));
     /// assert_eq!(opts.next_opt(), Ok(None));
     /// ```
-    pub fn value_opt(&'_ mut self) -> Option<A> {
+    pub fn value_opt(&mut self) -> Option<A> {
         match self.state {
             State::Start { .. } | State::Positional(_) | State::End { .. } => {
                 panic!("called Options::value_opt() with no previous option")
@@ -721,7 +721,7 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
     /// assert_eq!(opts.next_positional(), Some("bar"));
     /// assert_eq!(opts.next_positional(), None);
     /// ```
-    pub fn next_positional(&'_ mut self) -> Option<A> {
+    pub fn next_positional(&mut self) -> Option<A> {
         match self.state {
             State::Start { ended_opts } => self.iter.next().or_else(|| {
                 self.state = State::End { ended_opts };

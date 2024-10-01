@@ -115,7 +115,7 @@ pub trait Argument: Copy + Eq + Debug {
     fn consume_short_val(self) -> Self;
 }
 
-impl Argument for &'_ str {
+impl Argument for &str {
     type ShortOpt = char;
 
     #[inline]
@@ -160,7 +160,7 @@ impl Argument for &'_ str {
     }
 }
 
-impl Argument for &'_ [u8] {
+impl Argument for &[u8] {
     type ShortOpt = u8;
 
     #[inline]
