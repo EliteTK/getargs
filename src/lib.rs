@@ -418,7 +418,7 @@ enum State<A: Argument> {
     /// We are in the middle of a cluster of short options. From here,
     /// we can get the next short option, or we can get the value for
     /// the last short option. We may not get a positional argument.
-    ShortOptionCluster(Opt<A>, A),
+    ShortOptionCluster(A),
     /// We just consumed a long option with a value attached with `=`,
     /// e.g. `--execute=expression`. We must get the following value.
     LongOptionWithValue(Opt<A>, A),
@@ -489,7 +489,7 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
                     let opt = Opt::Short(opt);
 
                     if let Some(rest) = rest {
-                        self.state = State::ShortOptionCluster(opt, rest);
+                        self.state = State::ShortOptionCluster(rest);
                     } else {
                         self.state = State::EndOfOption(opt);
                     }
@@ -501,12 +501,12 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
                 }
             }
 
-            State::ShortOptionCluster(_, rest) => {
+            State::ShortOptionCluster(rest) => {
                 let (opt, rest) = rest.consume_short_opt();
                 let opt = Opt::Short(opt);
 
                 if let Some(rest) = rest {
-                    self.state = State::ShortOptionCluster(opt, rest);
+                    self.state = State::ShortOptionCluster(rest);
                 } else {
                     self.state = State::EndOfOption(opt);
                 }
@@ -616,7 +616,7 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
                 }
             }
 
-            State::ShortOptionCluster(_, val) => {
+            State::ShortOptionCluster(val) => {
                 self.state = State::Start { ended_opts: false };
                 Ok(val.consume_short_val())
             }
@@ -679,7 +679,7 @@ impl<'arg, A: Argument + 'arg, I: Iterator<Item = A>> Options<A, I> {
             // If the option had no explicit `=value`, return None
             State::EndOfOption(_) => None,
 
-            State::ShortOptionCluster(_, val) | State::LongOptionWithValue(_, val) => {
+            State::ShortOptionCluster(val) | State::LongOptionWithValue(_, val) => {
                 self.state = State::Start { ended_opts: false };
                 Some(val)
             }
