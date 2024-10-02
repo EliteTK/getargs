@@ -1,5 +1,3 @@
-#![feature(bench_black_box)]
-
 use bench::{ARGS, ARGS_BYTES};
 use getargs::Argument;
 use std::hint::black_box;
